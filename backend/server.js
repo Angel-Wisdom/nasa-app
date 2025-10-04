@@ -1,47 +1,50 @@
+// backend/server.js
 import express from "express";
-import bodyParser from "body-parser";
 import cors from "cors";
 import dotenv from "dotenv";
-import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
+import admin from "firebase-admin";
 
 dotenv.config();
+
 const app = express();
-const PORT = 5000;
-
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
+const PORT = process.env.PORT || 5000;
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// Firebase admin init (same serviceAccount file)
+const serviceAccount = JSON.parse(fs.readFileSync(path.resolve("./serviceAccountKey.json"), "utf8"));
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
 });
+const db = admin.firestore();
 
-// Summarizer route
-app.post("/api/summarize", async (req, res) => {
+// GET /api/publications  (paged)
+app.get("/api/publications", async (req, res) => {
   try {
-    const { title, content } = req.body;
-    if (!content) return res.status(400).json({ error: "No content provided" });
-
-    const prompt = `
-    Summarize the following NASA bioscience publication text into 3-5 bullet points.
-    Each point must be a clear scientific insight.
-
-    Title: ${title}
-    Text: ${content}
-    `;
-
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-    });
-
-    res.json({ title, summary: response.choices[0].message.content });
+    const limit = parseInt(req.query.limit || "50", 10);
+    const snapshot = await db.collection("publications").orderBy("createdAt", "desc").limit(limit).get();
+    const arr = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(arr);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to summarize" });
+    res.status(500).json({ error: "failed" });
+  }
+});
+
+// GET /api/paper/:id
+app.get("/api/paper/:id", async (req, res) => {
+  try {
+    const doc = await db.collection("publications").doc(req.params.id).get();
+    if (!doc.exists) return res.status(404).json({ error: "not found" });
+    res.json({ id: doc.id, ...doc.data() });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "failed" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Backend running at http://localhost:${PORT}`);
+  console.log(`Backend API running on http://localhost:${PORT}`);
 });

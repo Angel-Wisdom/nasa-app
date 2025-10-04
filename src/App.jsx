@@ -1,66 +1,70 @@
-import { useState } from "react";
+// frontend/src/App.jsx
+import { useEffect, useState } from "react";
 import axios from "axios";
 
-function App() {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [summary, setSummary] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function App() {
+  const [papers, setPapers] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const handleSummarize = async () => {
-    if (!content) {
-      alert("Please enter text to summarize.");
-      return;
+  useEffect(() => {
+    async function load() {
+      setLoadingList(true);
+      try {
+        const res = await axios.get("http://localhost:5000/api/publications?limit=100");
+        setPapers(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingList(false);
+      }
     }
+    load();
+  }, []);
 
-    setLoading(true);
-    setSummary("");
-
+  async function openPaper(id) {
+    setLoadingDetail(true);
     try {
-      const res = await axios.post("/api/summarize", { title, content });
-      setSummary(res.data.summary);
+      const res = await axios.get(`http://localhost:5000/api/paper/${id}`);
+      setSelected(res.data);
     } catch (err) {
       console.error(err);
-      alert("Error fetching summary");
     } finally {
-      setLoading(false);
+      setLoadingDetail(false);
     }
-  };
+  }
 
   return (
-    <div style={{ padding: "20px", maxWidth: "700px", margin: "auto" }}>
-      <h1>🚀 NASA AI Summarizer</h1>
+    <div style={{ display: "flex", padding: 20, gap: 20 }}>
+      <div style={{ width: 360 }}>
+        <h2>NASA Papers</h2>
+        {loadingList ? <div>Loading...</div> : (
+          <div style={{ maxHeight: "80vh", overflow: "auto" }}>
+            {papers.map(p => (
+              <div key={p.id} style={{ padding: 8, borderBottom: "1px solid #eee" }}>
+                <div style={{ fontWeight: 600 }}>{p.title}</div>
+                <div style={{ fontSize: 12, color: "#444" }}>{p.link}</div>
+                <button onClick={() => openPaper(p.id)} style={{ marginTop: 6 }}>Open</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <input
-        type="text"
-        placeholder="Enter paper title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <textarea
-        placeholder="Paste Results + Conclusion here..."
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        style={{ width: "100%", height: "150px", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <button
-        onClick={handleSummarize}
-        style={{ padding: "10px 20px", background: "blue", color: "white", border: "none" }}
-      >
-        {loading ? "Summarizing..." : "Summarize"}
-      </button>
-
-      {summary && (
-        <div style={{ marginTop: "20px", padding: "15px", background: "#f4f4f4" }}>
-          <h2>Summary</h2>
-          <pre style={{ whiteSpace: "pre-wrap" }}>{summary}</pre>
-        </div>
-      )}
+      <div style={{ flex: 1 }}>
+        <h2>Paper Detail</h2>
+        {loadingDetail ? <div>Loading...</div> : selected ? (
+          <div>
+            <h3>{selected.title}</h3>
+            <a href={selected.link} target="_blank" rel="noreferrer">Open original</a>
+            <h4>AI Summary</h4>
+            <pre style={{ whiteSpace: "pre-wrap" }}>{selected.summary || "No summary."}</pre>
+            <h4>Excerpt (truncated)</h4>
+            <pre style={{ whiteSpace: "pre-wrap", maxHeight: 240, overflow: "auto" }}>{selected.excerpt}</pre>
+          </div>
+        ) : <div>Select a paper.</div>}
+      </div>
     </div>
   );
 }
-
-export default App;
