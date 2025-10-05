@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import KeywordPapersList from "./KeywordPapersList";
+import { Search, Rocket } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import "./KeywordExplorer.css";
 
 export default function KeywordExplorer() {
@@ -8,65 +8,149 @@ export default function KeywordExplorer() {
   const [selectedKeyword, setSelectedKeyword] = useState("");
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const API_BASE = "https://keyword-backend-4na7.onrender.com/api";
+  // ✅ Use your deployed API here
+  const API_URL = "https://keyword-backend-4na7.onrender.com/api";
 
-  // Fetch all keywords
+  // Fetch all keywords on load
   useEffect(() => {
-    fetch(`${API_BASE}/keywords`)
+    fetch(`${API_URL}/keywords`)
       .then((res) => res.json())
-      .then(setKeywords)
-      .catch((err) => console.error("Error fetching keywords:", err));
+      .then((data) => setKeywords(data))
+      .catch((err) => console.error("Error loading keywords:", err));
   }, []);
 
-  // Fetch papers by keyword
-  const fetchPapers = async () => {
+  const handleSearch = () => {
     if (!selectedKeyword) return;
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/papers?keyword=${selectedKeyword}`);
-      const data = await res.json();
-      setPapers(data);
-    } catch (err) {
-      console.error("Error fetching papers:", err);
-    } finally {
-      setLoading(false);
-    }
+    setHasSearched(true);
+    setPapers([]);
+
+    fetch(`${API_URL}/papers?keyword=${encodeURIComponent(selectedKeyword)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPapers(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Search failed:", error);
+        setLoading(false);
+      });
   };
 
   return (
-    <div className="keyword-explorer">
-      <h1 className="page-title">🔎 Keyword Explorer</h1>
-      <p className="page-subtitle">
-        Choose a keyword to view related research papers from the NASA
-        BioScience dataset.
-      </p>
+    <div className="app-container">
+      {/* Header */}
+      <motion.header
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, type: "spring" }}
+        className="app-header"
+      >
+        <h1 className="header-title">
+          <Rocket />
+          Cosmic Discoveries
+        </h1>
+        <button className="sign-in-button">Sign In</button>
+      </motion.header>
 
-      <div className="search-bar">
-        <select
-          className="keyword-select"
-          value={selectedKeyword}
-          onChange={(e) => setSelectedKeyword(e.target.value)}
-        >
-          <option value="">-- Select a Keyword --</option>
-          {keywords.map((k, i) => (
-            <option key={i} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
+      {/* Main Content */}
+      <motion.main initial="hidden" animate="visible" className="main-content">
+        <motion.div className="hero-section">
+          <h2 className="hero-title">Unlock the Secrets of the Cosmos</h2>
+          <p className="hero-subtitle">
+            Dive into a galaxy of NASA bioscience experiments. Choose a keyword
+            to begin your journey.
+          </p>
+        </motion.div>
 
-        <button className="search-btn" onClick={fetchPapers}>
-          <Search className="icon" />
-          Search
-        </button>
-      </div>
+        {/* Dropdown + Search */}
+        <motion.div className="search-section">
+          <select
+            className="keyword-select"
+            value={selectedKeyword}
+            onChange={(e) => setSelectedKeyword(e.target.value)}
+          >
+            <option value="">Select a research keyword...</option>
+            {keywords.length > 0 ? (
+              keywords.map((k, i) => (
+                <option key={i} value={k}>
+                  {k}
+                </option>
+              ))
+            ) : (
+              <option disabled>Loading keywords...</option>
+            )}
+          </select>
 
-      {loading && <p className="loading">Fetching research papers...</p>}
-      {!loading && papers.length > 0 && <KeywordPapersList papers={papers} />}
-      {!loading && selectedKeyword && papers.length === 0 && (
-        <p className="no-results">No papers found for "{selectedKeyword}".</p>
-      )}
+          <motion.button
+            onClick={handleSearch}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="search-button"
+          >
+            <Search size={18} /> Search
+          </motion.button>
+        </motion.div>
+
+        {/* Results */}
+        <div className="results-container">
+          {loading && (
+            <div className="loading-spinner-container">
+              <motion.div
+                className="loading-spinner"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              ></motion.div>
+            </div>
+          )}
+
+          <AnimatePresence>
+            {!loading && hasSearched && papers.length === 0 && (
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                style={{ marginTop: "2.5rem", fontSize: "1.25rem" }}
+              >
+                No papers found for this keyword. 🔭
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          <motion.div className="results-grid">
+            <AnimatePresence>
+              {papers.map((p, i) => (
+                <motion.div
+                  key={i}
+                  className="paper-card"
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <h3 className="paper-title">{p.Title}</h3>
+                  <a
+                    href={p.Link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="paper-link"
+                  >
+                    View Paper →
+                  </a>
+                  <div className="keywords-container">
+                    {p.Keywords.map((k, j) => (
+                      <span key={j} className="keyword-tag">
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      </motion.main>
     </div>
   );
 }
