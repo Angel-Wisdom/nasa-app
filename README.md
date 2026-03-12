@@ -9,7 +9,7 @@ It is built as a single‑page application with a React + Vite frontend and uses
 
 - Browse NASA bioscience publications from curated space‑biology datasets.  
 - Filter studies by mission, organism, experiment type, and other metadata via a dashboard UI.  
-- Visualize relationships between keywords and entities using a knowledge‑graph‑style view.  
+- Visualize relationships between keywords and entities using a knowledge‑graph style view.  
 - View AI‑generated summaries to quickly understand the goal, methods and impact of each experiment.
 
 
