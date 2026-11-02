@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Space Biology Knowledge Engine is a web‑based dashboard that helps users explore NASA bioscience experiments using an interactive UI, rich filters, and AI‑assisted summaries of research papers.[web:74][web:77]  
+The Space Biology Knowledge Engine is a web‑based dashboard that helps users explore NASA bioscience experiments using an interactive UI, rich filters, and AI‑assisted summaries of research papers.
 It is built as a single‑page application with a React + Vite frontend and uses NASA open data 
 
 ## Features
